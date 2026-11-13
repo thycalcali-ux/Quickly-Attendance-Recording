@@ -57,8 +57,8 @@
           <span>Paper Helper</span>
         </button>
         <button id="btnTabRoster" onclick="switchTab('roster')" class="px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-          <span>Edit Names</span>
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Manage Students</span>
         </button>
       </div>
     </div>
@@ -89,7 +89,7 @@
         <div class="flex items-center gap-4 text-center">
           <div class="bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800">
             <span class="text-xs text-slate-400 block">Total</span>
-            <span id="statTotal" class="text-xl font-black text-white">111</span>
+            <span id="statTotal" class="text-xl font-black text-white">0</span>
           </div>
           <div class="bg-emerald-950/40 px-4 py-2 rounded-xl border border-emerald-800/40">
             <span class="text-xs text-emerald-400 block">Present (P)</span>
@@ -97,7 +97,7 @@
           </div>
           <div class="bg-rose-950/40 px-4 py-2 rounded-xl border border-rose-800/40">
             <span class="text-xs text-rose-400 block">Remaining / Absent</span>
-            <span id="statAbsent" class="text-xl font-black text-rose-400">111</span>
+            <span id="statAbsent" class="text-xl font-black text-rose-400">0</span>
           </div>
         </div>
       </div>
@@ -136,7 +136,7 @@
 
         <!-- Live Feed -->
         <div class="lg:col-span-7 bg-slate-800/80 border border-slate-700 rounded-3xl p-6 flex flex-col h-[650px] shadow-2xl">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-700">
             <div>
               <h3 class="text-lg font-bold text-white flex items-center gap-2">
                 <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
@@ -144,7 +144,13 @@
               </h3>
               <p class="text-xs text-slate-400">បញ្ជីឈ្មោះសិស្សដែលបានចុះវត្តមានផ្ទាល់</p>
             </div>
-            <input type="text" id="searchFilter" oninput="renderRosterList()" placeholder="Search name/ID..." class="bg-slate-900 text-xs rounded-xl px-3 py-2 text-white border border-slate-700 focus:outline-none focus:border-emerald-500 w-44">
+            <div class="flex items-center gap-2">
+              <input type="text" id="searchFilter" oninput="renderRosterList()" placeholder="Search name/ID..." class="bg-slate-900 text-xs rounded-xl px-3 py-2 text-white border border-slate-700 focus:outline-none focus:border-emerald-500 w-36 sm:w-44">
+              <button onclick="switchTab('roster')" title="Manage Students" class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow">
+                <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Manage</span>
+              </button>
+            </div>
           </div>
 
           <div id="rosterList" class="flex-1 overflow-y-auto space-y-2 py-4 pr-1"></div>
@@ -193,22 +199,59 @@
       </div>
     </div>
 
-    <!-- ROSTER MANAGER -->
+    <!-- ROSTER & TABLE MANAGER -->
     <div id="viewRoster" class="hidden space-y-6">
-      <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-6">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-700 mb-4">
+      <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-6 space-y-6">
+        
+        <!-- HEADER & ACTIONS -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-700">
           <div>
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-              <i data-lucide="file-text" class="w-5 h-5 text-emerald-400"></i>
-              Manage Student Names for <span id="manageClassLabel" class="text-emerald-400">Class 1</span>
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="table" class="w-6 h-6 text-sky-400"></i>
+              Manage Students for <span id="manageClassLabel" class="text-sky-400">Class 1</span>
             </h3>
-            <p class="text-xs text-slate-400">Paste your student names from Excel (1 name per line) to instantly customize this class.</p>
+            <p class="text-xs text-slate-400">Add, edit, or import student data (ID, Name, Student Number, Gender, Grade).</p>
           </div>
-          <button onclick="saveCustomRoster()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl text-white flex items-center gap-1.5 shadow">
-            <i data-lucide="save" class="w-4 h-4"></i> Save Roster
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openAddStudentModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> + Add Student Manually
+            </button>
+            <button onclick="openImportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Paste from Excel / TXT
+            </button>
+            <button onclick="deleteAllStudentsInClass()" class="px-3 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold rounded-xl flex items-center gap-1">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All
+            </button>
+          </div>
         </div>
-        <textarea id="rosterPasteArea" rows="12" class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"></textarea>
+
+        <!-- SEARCH & FILTER BAR -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <input type="text" id="tableSearchInput" oninput="renderStudentTable()" placeholder="Search students by ID, Name, Grade..." class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-sky-500 w-full sm:w-80">
+          <div class="text-xs text-slate-400">
+            Total Students: <span id="tableTotalCount" class="font-bold text-white">0</span>
+          </div>
+        </div>
+
+        <!-- STUDENT TABLE DISPLAY -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-700 bg-slate-900/50">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-800/90 text-slate-300 text-xs uppercase tracking-wider border-b border-slate-700">
+                <th class="p-3 font-semibold">Roll #</th>
+                <th class="p-3 font-semibold">ID</th>
+                <th class="p-3 font-semibold">Student Full Name (Eng / Khmer)</th>
+                <th class="p-3 font-semibold">Gender</th>
+                <th class="p-3 font-semibold">Grade</th>
+                <th class="p-3 font-semibold">Status</th>
+                <th class="p-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody" class="divide-y divide-slate-800 text-xs">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -255,6 +298,83 @@
     </div>
   </main>
 
+  <!-- MODAL: ADD / EDIT STUDENT -->
+  <div id="studentModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+        <h3 id="modalTitle" class="text-base font-bold text-white">Add Student</h3>
+        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="studentForm" onsubmit="handleSaveStudent(event)" class="space-y-3">
+        <input type="hidden" id="editOriginalId">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Student ID (លេខសម្គាល់)</label>
+          <input type="text" id="modalInputId" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Student Full Name (ឈ្មោះពេញ Eng / Khmer)</label>
+          <input type="text" id="modalInputName" required placeholder="e.g. Sok Dara / សុខ ដារ៉ា" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Student Number / Roll #</label>
+            <input type="number" id="modalInputRoll" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Gender (ភេទ)</label>
+            <select id="modalInputGender" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+              <option value="Male">Male (ប្រុស)</option>
+              <option value="Female">Female (ស្រី)</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Grade (កម្រិតថ្នាក់)</label>
+          <input type="text" id="modalInputGrade" placeholder="e.g. Grade 7" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div class="pt-3 flex justify-end gap-2">
+          <button type="button" onclick="closeStudentModal()" class="px-4 py-2 bg-slate-700 text-xs font-semibold rounded-xl text-slate-200">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-xs font-bold rounded-xl text-white">Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT EXCEL / TXT -->
+  <div id="importModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i> Import Student List (Excel, TXT, or CSV)
+        </h3>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div>
+        <p class="text-xs text-slate-300 mb-2">
+          Paste copied rows from <b>Excel / Google Sheets</b> or a text file. Format per line:<br>
+          <code class="text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded font-mono">ID [Tab/Comma] Full Name [Tab/Comma] Roll No [Tab/Comma] Gender [Tab/Comma] Grade</code><br>
+          <i>(If you paste just names, ID, Roll #, Gender, and Grade will be auto-generated).</i>
+        </p>
+        <textarea id="importPasteArea" rows="10" placeholder="Paste data here..." class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"></textarea>
+      </div>
+      <div class="flex flex-wrap items-center justify-between pt-2">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400 flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="importMode" value="append" checked class="accent-emerald-500"> Append to existing list
+          </label>
+          <label class="text-xs text-slate-400 flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="importMode" value="replace" class="accent-emerald-500"> Replace entire list
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeImportModal()" class="px-4 py-2 bg-slate-700 text-xs font-semibold rounded-xl text-slate-200">Cancel</button>
+          <button type="button" onclick="processImportData()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl text-white">Import Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const KHMER_NAMES = [
       "សុខ ចាន់ដារ៉ា", "កែវ សុភ័ក្រ", "ហេង វិសាល", "ចាន់ ធីតា", "ម៉ៅ សុខា", "លី ប៊ុនថន", "ជា វឌ្ឍនៈ", "ស៊ិន សុភាព", 
@@ -266,21 +386,21 @@
     let allClassesData = {};
     let audioEnabled = true;
 
-    // Fixed peer connection variables
     let teacherPeer = null;
     let targetRoomId = null;
     let studentPeer = null;
 
     function buildDefaultClass(classIndex) {
       const list = [];
-      for (let i = 1; i <= 111; i++) {
-        const baseName = KHMER_NAMES[(i - 1 + classIndex * 3) % KHMER_NAMES.length];
-        const round = Math.floor((i - 1) / KHMER_NAMES.length);
-        const name = round > 0 ? `${baseName} (${round + 1})` : baseName;
+      for (let i = 1; i <= 25; i++) {
+        const baseName = KHMER_NAMES[(i - 1) % KHMER_NAMES.length];
+        const gender = i % 2 === 0 ? "Female" : "Male";
         list.push({
           id: `C${classIndex}-STU-${String(i).padStart(3, '0')}`,
+          name: baseName,
           rollNo: i,
-          name: name,
+          gender: gender,
+          grade: `Grade ${classIndex + 6}`,
           status: 'UNMARKED',
           timestamp: null
         });
@@ -289,13 +409,13 @@
     }
 
     function initMultiClassStorage() {
-      const stored = localStorage.getItem('attendance_multiclass_store');
+      const stored = localStorage.getItem('attendance_multiclass_store_v2');
       if (stored) {
         try { allClassesData = JSON.parse(stored); } catch(e) { allClassesData = {}; }
       }
       for (let i = 1; i <= 5; i++) {
         const k = `class_${i}`;
-        if (!allClassesData[k] || !allClassesData[k].students || allClassesData[k].students.length === 0) {
+        if (!allClassesData[k] || !Array.isArray(allClassesData[k].students)) {
           allClassesData[k] = { name: `Class ${i}`, students: buildDefaultClass(i) };
         }
       }
@@ -303,19 +423,24 @@
     }
 
     function saveAllData() {
-      localStorage.setItem('attendance_multiclass_store', JSON.stringify(allClassesData));
+      localStorage.setItem('attendance_multiclass_store_v2', JSON.stringify(allClassesData));
     }
 
     function getCurrentStudents() {
       return allClassesData[currentClassKey].students;
     }
 
-    function onClassChange(val) {
-      currentClassKey = val;
+    function refreshAllViews() {
       updateClassUI();
       renderRosterList();
       renderPaperHelper();
+      renderStudentTable();
       updateDashboardCounts();
+    }
+
+    function onClassChange(val) {
+      currentClassKey = val;
+      refreshAllViews();
       initTeacherP2P();
     }
 
@@ -326,16 +451,235 @@
       document.getElementById('liveFeedTitle').innerText = `${cName} Live Feed`;
       document.getElementById('paperTitle').innerText = `Paper Fill Helper (${cName})`;
       document.getElementById('manageClassLabel').innerText = cName;
-      document.getElementById('rosterPasteArea').value = getCurrentStudents().map(s => s.name).join('\n');
     }
 
-    // Teacher P2P Initialization
+    // ==========================================
+    // STUDENT TABLE & MODAL MANAGEMENT
+    // ==========================================
+    function renderStudentTable() {
+      const tbody = document.getElementById('studentTableBody');
+      const searchEl = document.getElementById('tableSearchInput');
+      const filter = searchEl ? searchEl.value.toLowerCase() : '';
+      const list = getCurrentStudents();
+
+      document.getElementById('tableTotalCount').innerText = list.length;
+
+      const filtered = list.filter(s =>
+        s.name.toLowerCase().includes(filter) ||
+        s.id.toLowerCase().includes(filter) ||
+        String(s.rollNo).includes(filter) ||
+        s.grade.toLowerCase().includes(filter) ||
+        s.gender.toLowerCase().includes(filter)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-slate-400">No student records found. Add students manually or import via Excel/TXT.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => {
+        const isPresent = s.status === 'P';
+        return `
+          <tr class="hover:bg-slate-800/50 transition-colors">
+            <td class="p-3 font-mono font-bold text-slate-300">#${s.rollNo}</td>
+            <td class="p-3 font-mono text-emerald-400">${s.id}</td>
+            <td class="p-3 font-semibold text-white">${s.name}</td>
+            <td class="p-3 text-slate-300">${s.gender}</td>
+            <td class="p-3 text-slate-300">${s.grade}</td>
+            <td class="p-3">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                isPresent ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
+              }">
+                ${isPresent ? 'Present (P)' : 'Unmarked'}
+              </span>
+            </td>
+            <td class="p-3 text-right space-x-1">
+              <button onclick="openEditStudentModal('${s.id}')" title="Edit" class="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteStudentById('${s.id}')" title="Delete" class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function openAddStudentModal() {
+      document.getElementById('modalTitle').innerText = "Add Student";
+      document.getElementById('editOriginalId').value = "";
+      document.getElementById('studentForm').reset();
+      const list = getCurrentStudents();
+      const classNum = currentClassKey.split('_')[1];
+      const nextRoll = list.length + 1;
+      document.getElementById('modalInputId').value = `C${classNum}-STU-${String(nextRoll).padStart(3, '0')}`;
+      document.getElementById('modalInputRoll').value = nextRoll;
+      document.getElementById('modalInputGrade').value = `Grade ${classNum}`;
+      document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function openEditStudentModal(id) {
+      const student = getCurrentStudents().find(s => s.id === id);
+      if (!student) return;
+      document.getElementById('modalTitle').innerText = "Edit Student";
+      document.getElementById('editOriginalId').value = student.id;
+      document.getElementById('modalInputId').value = student.id;
+      document.getElementById('modalInputName').value = student.name;
+      document.getElementById('modalInputRoll').value = student.rollNo;
+      document.getElementById('modalInputGender').value = student.gender || "Male";
+      document.getElementById('modalInputGrade').value = student.grade || "";
+      document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('studentModal').classList.add('hidden');
+    }
+
+    function handleSaveStudent(e) {
+      e.preventDefault();
+      const origId = document.getElementById('editOriginalId').value;
+      const id = document.getElementById('modalInputId').value.trim();
+      const name = document.getElementById('modalInputName').value.trim();
+      const rollNo = parseInt(document.getElementById('modalInputRoll').value) || 1;
+      const gender = document.getElementById('modalInputGender').value;
+      const grade = document.getElementById('modalInputGrade').value.trim();
+
+      const list = getCurrentStudents();
+
+      if (origId) {
+        // Editing existing
+        const student = list.find(s => s.id === origId);
+        if (student) {
+          student.id = id;
+          student.name = name;
+          student.rollNo = rollNo;
+          student.gender = gender;
+          student.grade = grade;
+        }
+      } else {
+        // Adding new
+        list.push({
+          id,
+          name,
+          rollNo,
+          gender,
+          grade,
+          status: 'UNMARKED',
+          timestamp: null
+        });
+      }
+
+      saveAllData();
+      closeStudentModal();
+      refreshAllViews();
+    }
+
+    function deleteStudentById(id) {
+      if (!confirm("Are you sure you want to delete this student?")) return;
+      const list = getCurrentStudents();
+      const idx = list.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        list.splice(idx, 1);
+        saveAllData();
+        refreshAllViews();
+      }
+    }
+
+    function deleteAllStudentsInClass() {
+      const cName = allClassesData[currentClassKey].name;
+      if (!confirm(`Delete ALL students in ${cName}?`)) return;
+      allClassesData[currentClassKey].students = [];
+      saveAllData();
+      refreshAllViews();
+    }
+
+    // ==========================================
+    // IMPORT EXCEL / TXT / CSV
+    // ==========================================
+    function openImportModal() {
+      document.getElementById('importPasteArea').value = "";
+      document.getElementById('importModal').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').classList.add('hidden');
+    }
+
+    function processImportData() {
+      const text = document.getElementById('importPasteArea').value.trim();
+      if (!text) return alert("Please paste student data.");
+
+      const modeRadio = document.querySelector('input[name="importMode"]:checked');
+      const replaceMode = modeRadio && modeRadio.value === 'replace';
+
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const newStudents = [];
+      const classNum = currentClassKey.split('_')[1];
+      let baseRoll = replaceMode ? 1 : getCurrentStudents().length + 1;
+
+      lines.forEach((line, idx) => {
+        // Detect tab or comma separation
+        const parts = line.includes('\t') ? line.split('\t') : (line.includes(',') ? line.split(',') : [line]);
+        const cleanedParts = parts.map(p => p.trim()).filter(p => p.length > 0);
+
+        let sId, sName, sRoll, sGender, sGrade;
+
+        if (cleanedParts.length >= 5) {
+          sId = cleanedParts[0];
+          sName = cleanedParts[1];
+          sRoll = parseInt(cleanedParts[2]) || (baseRoll + idx);
+          sGender = cleanedParts[3];
+          sGrade = cleanedParts[4];
+        } else if (cleanedParts.length === 2) {
+          // e.g. ID and Name
+          sId = cleanedParts[0];
+          sName = cleanedParts[1];
+          sRoll = baseRoll + idx;
+          sGender = "Male";
+          sGrade = `Grade ${classNum}`;
+        } else {
+          // Just name
+          sId = `C${classNum}-STU-${String(baseRoll + idx).padStart(3, '0')}`;
+          sName = cleanedParts[0];
+          sRoll = baseRoll + idx;
+          sGender = "Male";
+          sGrade = `Grade ${classNum}`;
+        }
+
+        newStudents.push({
+          id: sId,
+          name: sName,
+          rollNo: sRoll,
+          gender: sGender,
+          grade: sGrade,
+          status: 'UNMARKED',
+          timestamp: null
+        });
+      });
+
+      if (replaceMode) {
+        allClassesData[currentClassKey].students = newStudents;
+      } else {
+        allClassesData[currentClassKey].students.push(...newStudents);
+      }
+
+      saveAllData();
+      closeImportModal();
+      refreshAllViews();
+      alert(`Successfully imported ${newStudents.length} student records!`);
+    }
+
+    // ==========================================
+    // TEACHER P2P & DASHBOARD
+    // ==========================================
     function initTeacherP2P() {
       if (teacherPeer) {
         teacherPeer.destroy();
       }
 
-      // Stable room ID per class and GitHub repo owner
       const roomId = `HS-ATTEND-${currentClassKey.toUpperCase()}-${Math.floor(Date.now() / 86400000)}`;
       document.getElementById('teacherPeerId').innerText = roomId;
 
@@ -392,7 +736,6 @@
       alert("Link copied to clipboard:\n" + checkinUrl);
     }
 
-    // Audio chime synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playChime() {
       if (!audioEnabled || !audioCtx) return;
@@ -433,12 +776,13 @@
         student.status = 'P';
         student.timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
       } else {
-        // If student not in roster, append them
         const newRoll = list.length + 1;
         const newStu = {
           id: idOrRoll || `STU-${newRoll}`,
-          rollNo: newRoll,
           name: rawName,
+          rollNo: newRoll,
+          gender: "Male",
+          grade: `Grade ${currentClassKey.split('_')[1]}`,
           status: 'P',
           timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
         };
@@ -446,9 +790,7 @@
       }
 
       saveAllData();
-      updateDashboardCounts();
-      renderRosterList();
-      renderPaperHelper();
+      refreshAllViews();
 
       if (notify) {
         playChime();
@@ -491,7 +833,7 @@
               }">#${s.rollNo}</span>
               <div>
                 <div class="text-sm font-semibold text-white">${s.name}</div>
-                <div class="text-xs text-slate-400 font-mono">${s.id}</div>
+                <div class="text-xs text-slate-400 font-mono">${s.id} • ${s.gender} • ${s.grade}</div>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -515,9 +857,7 @@
         s.status = s.status === 'P' ? 'UNMARKED' : 'P';
         s.timestamp = s.status === 'P' ? new Date().toLocaleTimeString('en-US', { hour12: false }) : null;
         saveAllData();
-        updateDashboardCounts();
-        renderRosterList();
-        renderPaperHelper();
+        refreshAllViews();
       }
     }
 
@@ -530,9 +870,7 @@
         }
       });
       saveAllData();
-      updateDashboardCounts();
-      renderRosterList();
-      renderPaperHelper();
+      refreshAllViews();
       alert(`Finalized! Found ${count} absent students. Check the red badges to fill your paper sheet.`);
     }
 
@@ -561,9 +899,7 @@
         s.timestamp = null;
       });
       saveAllData();
-      updateDashboardCounts();
-      renderRosterList();
-      renderPaperHelper();
+      refreshAllViews();
     }
 
     function testSimulateCheckIn() {
@@ -574,9 +910,9 @@
     }
 
     function exportToCSV() {
-      let csv = `Roll No,Student ID,Full Name,Status,Timestamp\n`;
+      let csv = `Roll No,Student ID,Full Name,Gender,Grade,Status,Timestamp\n`;
       getCurrentStudents().forEach(s => {
-        csv += `${s.rollNo},"${s.id}","${s.name}","${s.status}","${s.timestamp || ''}"\n`;
+        csv += `${s.rollNo},"${s.id}","${s.name}","${s.gender}","${s.grade}","${s.status}","${s.timestamp || ''}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
@@ -585,28 +921,6 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }
-
-    function saveCustomRoster() {
-      const text = document.getElementById('rosterPasteArea').value;
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      if (lines.length === 0) return alert("Please enter at least one student name.");
-
-      const updated = lines.map((name, idx) => ({
-        id: `C${currentClassKey.split('_')[1]}-STU-${String(idx + 1).padStart(3, '0')}`,
-        rollNo: idx + 1,
-        name: name,
-        status: 'UNMARKED',
-        timestamp: null
-      }));
-
-      allClassesData[currentClassKey].students = updated;
-      saveAllData();
-      updateClassUI();
-      renderRosterList();
-      renderPaperHelper();
-      updateDashboardCounts();
-      alert(`Updated ${allClassesData[currentClassKey].name} roster with ${updated.length} students!`);
     }
 
     // ==========================================
@@ -654,7 +968,6 @@
         return;
       }
 
-      // Connect and send to Teacher
       const conn = studentPeer.connect(targetRoomId);
 
       conn.on('open', () => {
@@ -674,7 +987,6 @@
         }
       });
 
-      // Timeout fallback in case connection is firewalled
       setTimeout(() => {
         document.getElementById('studentCheckInForm').classList.add('hidden');
         const box = document.getElementById('studentSuccessBox');
@@ -703,6 +1015,7 @@
       } else if (tab === 'roster') {
         document.getElementById('viewRoster').classList.remove('hidden');
         document.getElementById('btnTabRoster').className = 'px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-sky-600 text-white font-semibold shadow';
+        renderStudentTable();
       } else if (tab === 'student') {
         document.getElementById('viewStudent').classList.remove('hidden');
         document.getElementById('classSelectorContainer').classList.add('hidden');
@@ -720,7 +1033,6 @@
 
       const hash = window.location.hash;
       if (hash.includes('student')) {
-        // Phone mode
         switchTab('student');
         const matchRoom = hash.match(/room=([A-Za-z0-9-_]+)/);
         const matchClass = hash.match(/class=(class_[1-5])/);
@@ -732,14 +1044,36 @@
           initStudentClient(matchRoom[1]);
         }
       } else {
-        // Laptop / Teacher mode
-        updateClassUI();
-        renderRosterList();
-        renderPaperHelper();
-        updateDashboardCounts();
+        refreshAllViews();
         initTeacherP2P();
       }
     });
   </script>
 </body>
 </html>
+<script>
+  // Check if device already submitted
+if (localStorage.getItem('attendance_submitted') === 'true') {
+  document.getElementById('studentCheckInForm').classList.add('hidden');
+  document.getElementById('studentSuccessBox').classList.remove('hidden');
+  document.getElementById('successStudentDetails').innerText = "This device has already recorded an attendance.";
+}
+
+function handleStudentSubmit(e) {
+  e.preventDefault();
+  
+  // Enforce One-Device-One-Submission lock
+  if (localStorage.getItem('attendance_submitted') === 'true') {
+    alert("Error: This device has already submitted attendance!");
+    return;
+  }
+
+  const name = document.getElementById('studentInputName').value.trim();
+  const id = document.getElementById('studentInputId').value.trim();
+
+  // Mark local storage so they can't submit again
+  localStorage.setItem('attendance_submitted', 'true');
+  
+  // Proceed with P2P connection submit...
+}
+</script>
