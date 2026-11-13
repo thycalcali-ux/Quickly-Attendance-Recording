@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Attendance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', 'Kantumruy Pro', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- TOP BAR -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-30 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
+          <i data-lucide="scan-face" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white flex items-center gap-2">
+            Quick Attendance 
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium">Live P2P</span>
+          </h1>
+          <p class="text-xs text-slate-400">ប្រព័ន្ធកត់វត្តមាន Live • ៥ ថ្នាក់</p>
+        </div>
+      </div>
+
+      <!-- CLASS SELECTOR -->
+      <div id="classSelectorContainer" class="flex items-center gap-2 bg-slate-950/70 px-3 py-1.5 rounded-xl border border-slate-700">
+        <label for="classSelect" class="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+          <i data-lucide="layers" class="w-4 h-4"></i> Class:
+        </label>
+        <select id="classSelect" onchange="onClassChange(this.value)" class="bg-slate-800 text-white text-xs font-bold rounded-lg px-2.5 py-1 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer">
+          <option value="class_1">Class 1 (ថ្នាក់ទី ១)</option>
+          <option value="class_2">Class 2 (ថ្នាក់ទី ២)</option>
+          <option value="class_3">Class 3 (ថ្នាក់ទី ៣)</option>
+          <option value="class_4">Class 4 (ថ្នាក់ទី ៤)</option>
+          <option value="class_5">Class 5 (ថ្នាក់ទី ៥)</option>
+        </select>
+      </div>
+
+      <!-- TABS -->
+      <div class="flex items-center bg-slate-950/60 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm font-medium">
+        <button id="btnTabTeacher" onclick="switchTab('teacher')" class="px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-600 text-white font-semibold shadow">
+          <i data-lucide="projector" class="w-4 h-4"></i>
+          <span>Teacher View</span>
+        </button>
+        <button id="btnTabPaper" onclick="switchTab('paper')" class="px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200">
+          <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+          <span>Paper Helper</span>
+        </button>
+        <button id="btnTabRoster" onclick="switchTab('roster')" class="px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>Edit Names</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- TEACHER VIEW -->
+    <div id="viewTeacher" class="space-y-6">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="relative flex h-3 w-3">
+            <span id="p2pPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="p2pDot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold" id="teacherRoomLabel">Live QR for Class 1</div>
+            <div class="flex items-center gap-2">
+              <span id="teacherPeerId" class="text-sm font-mono font-bold text-emerald-400">Connecting...</span>
+              <button onclick="copyShareUrl()" title="Copy Link" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-center">
+          <div class="bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800">
+            <span class="text-xs text-slate-400 block">Total</span>
+            <span id="statTotal" class="text-xl font-black text-white">111</span>
+          </div>
+          <div class="bg-emerald-950/40 px-4 py-2 rounded-xl border border-emerald-800/40">
+            <span class="text-xs text-emerald-400 block">Present (P)</span>
+            <span id="statPresent" class="text-xl font-black text-emerald-400">0</span>
+          </div>
+          <div class="bg-rose-950/40 px-4 py-2 rounded-xl border border-rose-800/40">
+            <span class="text-xs text-rose-400 block">Remaining / Absent</span>
+            <span id="statAbsent" class="text-xl font-black text-rose-400">111</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- QR Display -->
+        <div class="lg:col-span-5 bg-slate-800/80 border border-slate-700 rounded-3xl p-6 flex flex-col items-center justify-between text-center shadow-2xl">
+          <div class="w-full">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
+              <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> SCAN TO CHECK IN
+            </div>
+            <h2 class="text-2xl font-black text-white mb-1" id="projectorClassName">Class 1 Attendance</h2>
+            <p class="text-xs text-slate-400 mb-4">Students scan via phone camera</p>
+
+            <div class="bg-white p-5 rounded-2xl shadow-xl inline-block mx-auto border-4 border-slate-700/50">
+              <div id="qrcodeCanvas"></div>
+            </div>
+
+            <div class="mt-4">
+              <p id="currentTimestamp" class="text-xs text-slate-400"></p>
+            </div>
+          </div>
+
+          <div class="w-full mt-6 pt-4 border-t border-slate-700/70 flex flex-wrap gap-2 justify-center">
+            <button onclick="testSimulateCheckIn()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs rounded-xl font-semibold flex items-center gap-1.5 text-slate-200">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Test Local Scan
+            </button>
+            <button onclick="resetCurrentClassAttendance()" class="px-3 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs rounded-xl font-semibold flex items-center gap-1.5">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Class
+            </button>
+            <button onclick="exportToCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs rounded-xl font-semibold flex items-center gap-1.5 text-white">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Feed -->
+        <div class="lg:col-span-7 bg-slate-800/80 border border-slate-700 rounded-3xl p-6 flex flex-col h-[650px] shadow-2xl">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
+                <span id="liveFeedTitle">Class 1 Live Feed</span>
+              </h3>
+              <p class="text-xs text-slate-400">បញ្ជីឈ្មោះសិស្សដែលបានចុះវត្តមានផ្ទាល់</p>
+            </div>
+            <input type="text" id="searchFilter" oninput="renderRosterList()" placeholder="Search name/ID..." class="bg-slate-900 text-xs rounded-xl px-3 py-2 text-white border border-slate-700 focus:outline-none focus:border-emerald-500 w-44">
+          </div>
+
+          <div id="rosterList" class="flex-1 overflow-y-auto space-y-2 py-4 pr-1"></div>
+
+          <div class="pt-3 border-t border-slate-700 flex items-center justify-between text-xs text-slate-400">
+            <span class="text-emerald-400 font-medium flex items-center gap-1">
+              <i data-lucide="wifi" class="w-4 h-4"></i> Real-time Network Sync Active
+            </span>
+            <button onclick="toggleAudioChime()" id="btnAudioToggle" class="text-emerald-400 flex items-center gap-1 font-medium">
+              <i data-lucide="volume-2" class="w-4 h-4"></i> Chime: ON
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAPER HELPER -->
+    <div id="viewPaper" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-amber-500/10 via-slate-800 to-slate-800 border border-amber-500/30 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs uppercase tracking-wider mb-2">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> 30-Second Hard Copy Helper
+          </span>
+          <h2 class="text-2xl font-black text-white" id="paperTitle">Paper Fill Helper (Class 1)</h2>
+          <p class="text-sm text-slate-300 max-w-2xl mt-1">
+            ចុចប៊ូតុងខាងស្តាំដើម្បីទាញយកតែ <b>"លេខរៀងសិស្សដែលអវត្តមាន (Absent)"</b>។ អ្នកគ្រូ/លោកគ្រូគ្រាន់តែកត់អក្សរ <b>A</b> លើក្រដាសតែប៉ុន្មាននាក់នេះជាការស្រេច!
+          </p>
+        </div>
+        <button onclick="finalizeUnmarkedAbsent()" class="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-xl shadow-amber-500/20 flex items-center gap-2">
+          <i data-lucide="check-check" class="w-5 h-5"></i>
+          Finalize Remaining as (A)
+        </button>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+          <h3 class="font-bold text-rose-400 flex items-center gap-2 text-base">
+            <i data-lucide="user-x" class="w-5 h-5"></i>
+            Absent Students to Fill on Paper (<span id="absentCountBadge">0</span>)
+          </h3>
+          <button onclick="window.print()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs rounded-xl font-medium flex items-center gap-1.5">
+            <i data-lucide="printer" class="w-4 h-4"></i> Print
+          </button>
+        </div>
+        <div id="absentBadgeGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+      </div>
+    </div>
+
+    <!-- ROSTER MANAGER -->
+    <div id="viewRoster" class="hidden space-y-6">
+      <div class="bg-slate-800/80 border border-slate-700 rounded-3xl p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-700 mb-4">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="file-text" class="w-5 h-5 text-emerald-400"></i>
+              Manage Student Names for <span id="manageClassLabel" class="text-emerald-400">Class 1</span>
+            </h3>
+            <p class="text-xs text-slate-400">Paste your student names from Excel (1 name per line) to instantly customize this class.</p>
+          </div>
+          <button onclick="saveCustomRoster()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl text-white flex items-center gap-1.5 shadow">
+            <i data-lucide="save" class="w-4 h-4"></i> Save Roster
+          </button>
+        </div>
+        <textarea id="rosterPasteArea" rows="12" class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"></textarea>
+      </div>
+    </div>
+
+    <!-- STUDENT CHECK-IN PORTAL (ON MOBILE) -->
+    <div id="viewStudent" class="hidden max-w-lg mx-auto">
+      <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold mb-3 border border-emerald-500/30">
+            <i data-lucide="user-check" class="w-7 h-7"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-white">ចុះវត្តមានសិស្ស</h2>
+          <p class="text-xs text-slate-400 mt-1" id="studentViewClassName">Attendance Self-Check-in</p>
+          <div id="studentConnectionBadge" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] bg-slate-900 border border-slate-700 text-amber-400">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Connecting to teacher...
+          </div>
+        </div>
+
+        <form id="studentCheckInForm" onsubmit="handleStudentSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              Select or Type Your Name / ជ្រើសរើសឈ្មោះ <span class="text-rose-400">*</span>
+            </label>
+            <input type="text" id="studentInputName" required placeholder="Type your full name..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">
+              Student ID / Roll No (លេខសម្គាល់ ឬ លេខរៀង) <span class="text-rose-400">*</span>
+            </label>
+            <input type="text" id="studentInputId" required placeholder="e.g. 1 or STU-001" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <button type="submit" id="studentSubmitBtn" class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 mt-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Submit Attendance / បញ្ជាក់វត្តមាន
+          </button>
+        </form>
+
+        <div id="studentSuccessBox" class="hidden mt-5 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-center">
+          <i data-lucide="badge-check" class="w-10 h-10 text-emerald-400 mx-auto mb-2"></i>
+          <h4 class="text-base font-bold text-emerald-300">វត្តមានត្រូវបានបញ្ជាក់ជោគជ័យ!</h4>
+          <p class="text-xs text-emerald-200/80 mt-1" id="successStudentDetails"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const KHMER_NAMES = [
+      "សុខ ចាន់ដារ៉ា", "កែវ សុភ័ក្រ", "ហេង វិសាល", "ចាន់ ធីតា", "ម៉ៅ សុខា", "លី ប៊ុនថន", "ជា វឌ្ឍនៈ", "ស៊ិន សុភាព", 
+      "អ៊ុំ សុវណ្ណ", "រស់ សុគន្ធ", "សួន ពិសិដ្ឋ", "ឡុង ចិន្តា", "នូ រតនា", "ប៉ែន គឹមសាន", "ឃុត ស្រីពៅ", "តុលា សិរី",
+      "នីសា ចរិយា", "សីហា វណ្ណា", "សុខ នីកា", "ចាន់ តុលា", "ឡាច ប៊ុនហ៊ាន", "រយ សុគលត្តិណា", "អ៊ុក សម្បត្តិ", "ទូច ពិសី"
+    ];
+
+    let currentClassKey = 'class_1';
+    let allClassesData = {};
+    let audioEnabled = true;
+
+    // Fixed peer connection variables
+    let teacherPeer = null;
+    let targetRoomId = null;
+    let studentPeer = null;
+
+    function buildDefaultClass(classIndex) {
+      const list = [];
+      for (let i = 1; i <= 111; i++) {
+        const baseName = KHMER_NAMES[(i - 1 + classIndex * 3) % KHMER_NAMES.length];
+        const round = Math.floor((i - 1) / KHMER_NAMES.length);
+        const name = round > 0 ? `${baseName} (${round + 1})` : baseName;
+        list.push({
+          id: `C${classIndex}-STU-${String(i).padStart(3, '0')}`,
+          rollNo: i,
+          name: name,
+          status: 'UNMARKED',
+          timestamp: null
+        });
+      }
+      return list;
+    }
+
+    function initMultiClassStorage() {
+      const stored = localStorage.getItem('attendance_multiclass_store');
+      if (stored) {
+        try { allClassesData = JSON.parse(stored); } catch(e) { allClassesData = {}; }
+      }
+      for (let i = 1; i <= 5; i++) {
+        const k = `class_${i}`;
+        if (!allClassesData[k] || !allClassesData[k].students || allClassesData[k].students.length === 0) {
+          allClassesData[k] = { name: `Class ${i}`, students: buildDefaultClass(i) };
+        }
+      }
+      saveAllData();
+    }
+
+    function saveAllData() {
+      localStorage.setItem('attendance_multiclass_store', JSON.stringify(allClassesData));
+    }
+
+    function getCurrentStudents() {
+      return allClassesData[currentClassKey].students;
+    }
+
+    function onClassChange(val) {
+      currentClassKey = val;
+      updateClassUI();
+      renderRosterList();
+      renderPaperHelper();
+      updateDashboardCounts();
+      initTeacherP2P();
+    }
+
+    function updateClassUI() {
+      const cName = allClassesData[currentClassKey].name;
+      document.getElementById('teacherRoomLabel').innerText = `Live QR for ${cName}`;
+      document.getElementById('projectorClassName').innerText = `${cName} Attendance`;
+      document.getElementById('liveFeedTitle').innerText = `${cName} Live Feed`;
+      document.getElementById('paperTitle').innerText = `Paper Fill Helper (${cName})`;
+      document.getElementById('manageClassLabel').innerText = cName;
+      document.getElementById('rosterPasteArea').value = getCurrentStudents().map(s => s.name).join('\n');
+    }
+
+    // Teacher P2P Initialization
+    function initTeacherP2P() {
+      if (teacherPeer) {
+        teacherPeer.destroy();
+      }
+
+      // Stable room ID per class and GitHub repo owner
+      const roomId = `HS-ATTEND-${currentClassKey.toUpperCase()}-${Math.floor(Date.now() / 86400000)}`;
+      document.getElementById('teacherPeerId').innerText = roomId;
+
+      teacherPeer = new Peer(roomId, {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      teacherPeer.on('open', (id) => {
+        document.getElementById('teacherPeerId').innerText = id;
+        generateTeacherQR(id);
+      });
+
+      teacherPeer.on('connection', (conn) => {
+        conn.on('data', (data) => {
+          if (data && data.type === 'CHECKIN') {
+            const recorded = recordStudentPresent(data.studentId, data.studentName, true);
+            conn.send({ status: 'SUCCESS', studentName: recorded ? recorded.name : data.studentName });
+          }
+        });
+      });
+
+      teacherPeer.on('error', (err) => {
+        console.warn("Peer error, falling back:", err);
+      });
+    }
+
+    function generateTeacherQR(roomId) {
+      const qrContainer = document.getElementById('qrcodeCanvas');
+      qrContainer.innerHTML = '';
+      const currentUrl = window.location.href.split('#')[0].split('?')[0];
+      const checkinUrl = `${currentUrl}#student?room=${roomId}&class=${currentClassKey}`;
+
+      new QRCode(qrContainer, {
+        text: checkinUrl,
+        width: 190,
+        height: 190,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function copyShareUrl() {
+      const currentUrl = window.location.href.split('#')[0].split('?')[0];
+      const roomId = document.getElementById('teacherPeerId').innerText;
+      const checkinUrl = `${currentUrl}#student?room=${roomId}&class=${currentClassKey}`;
+      navigator.clipboard.writeText(checkinUrl);
+      alert("Link copied to clipboard:\n" + checkinUrl);
+    }
+
+    // Audio chime synthesizer
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playChime() {
+      if (!audioEnabled || !audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    }
+
+    function toggleAudioChime() {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById('btnAudioToggle');
+      btn.innerHTML = audioEnabled 
+        ? '<i data-lucide="volume-2" class="w-4 h-4"></i> Chime: ON' 
+        : '<i data-lucide="volume-x" class="w-4 h-4"></i> Chime: OFF';
+      btn.className = audioEnabled ? 'text-emerald-400 flex items-center gap-1 font-medium' : 'text-slate-500 flex items-center gap-1 font-medium';
+      lucide.createIcons();
+    }
+
+    function recordStudentPresent(idOrRoll, rawName, notify = true) {
+      const list = getCurrentStudents();
+      const student = list.find(s => 
+        s.id.toUpperCase() === String(idOrRoll).trim().toUpperCase() ||
+        String(s.rollNo) === String(idOrRoll).trim() ||
+        s.name.trim().toLowerCase() === String(rawName).trim().toLowerCase()
+      );
+
+      if (student) {
+        student.status = 'P';
+        student.timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+      } else {
+        // If student not in roster, append them
+        const newRoll = list.length + 1;
+        const newStu = {
+          id: idOrRoll || `STU-${newRoll}`,
+          rollNo: newRoll,
+          name: rawName,
+          status: 'P',
+          timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
+        };
+        list.push(newStu);
+      }
+
+      saveAllData();
+      updateDashboardCounts();
+      renderRosterList();
+      renderPaperHelper();
+
+      if (notify) {
+        playChime();
+        try { confetti({ particleCount: 25, spread: 50, origin: { y: 0.8 } }); } catch(e){}
+      }
+      return student;
+    }
+
+    function updateDashboardCounts() {
+      const list = getCurrentStudents();
+      const total = list.length;
+      const present = list.filter(s => s.status === 'P').length;
+      const absent = total - present;
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statPresent').innerText = present;
+      document.getElementById('statAbsent').innerText = absent;
+      document.getElementById('absentCountBadge').innerText = absent;
+    }
+
+    function renderRosterList() {
+      const listEl = document.getElementById('rosterList');
+      const filter = document.getElementById('searchFilter').value.toLowerCase();
+      const list = getCurrentStudents();
+      const filtered = list.filter(s => 
+        s.name.toLowerCase().includes(filter) || 
+        s.id.toLowerCase().includes(filter) || 
+        String(s.rollNo).includes(filter)
+      );
+
+      listEl.innerHTML = filtered.map(s => {
+        const isPresent = s.status === 'P';
+        return `
+          <div class="flex items-center justify-between p-3 rounded-2xl border transition-all ${
+            isPresent ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-900/60 border-slate-800'
+          }">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-xl font-mono text-xs font-bold flex items-center justify-center ${
+                isPresent ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+              }">#${s.rollNo}</span>
+              <div>
+                <div class="text-sm font-semibold text-white">${s.name}</div>
+                <div class="text-xs text-slate-400 font-mono">${s.id}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${s.timestamp ? `<span class="text-xs font-mono text-emerald-400 font-medium">${s.timestamp}</span>` : ''}
+              <button onclick="toggleAttendanceStatus('${s.id}')" class="px-3 py-1 rounded-lg text-xs font-bold ${
+                isPresent 
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+              }">
+                ${isPresent ? 'Present (P)' : 'Unmarked'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleAttendanceStatus(id) {
+      const s = getCurrentStudents().find(item => item.id === id);
+      if (s) {
+        s.status = s.status === 'P' ? 'UNMARKED' : 'P';
+        s.timestamp = s.status === 'P' ? new Date().toLocaleTimeString('en-US', { hour12: false }) : null;
+        saveAllData();
+        updateDashboardCounts();
+        renderRosterList();
+        renderPaperHelper();
+      }
+    }
+
+    function finalizeUnmarkedAbsent() {
+      let count = 0;
+      getCurrentStudents().forEach(s => {
+        if (s.status !== 'P') {
+          s.status = 'A';
+          count++;
+        }
+      });
+      saveAllData();
+      updateDashboardCounts();
+      renderRosterList();
+      renderPaperHelper();
+      alert(`Finalized! Found ${count} absent students. Check the red badges to fill your paper sheet.`);
+    }
+
+    function renderPaperHelper() {
+      const grid = document.getElementById('absentBadgeGrid');
+      const absents = getCurrentStudents().filter(s => s.status === 'A' || s.status === 'UNMARKED');
+
+      if (absents.length === 0) {
+        grid.innerHTML = `<div class="col-span-full py-8 text-center text-emerald-400 font-semibold">🎉 All students are Present! Nothing to write on paper.</div>`;
+        return;
+      }
+
+      grid.innerHTML = absents.map(s => `
+        <div class="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-center flex flex-col items-center justify-center">
+          <span class="text-xl font-black text-rose-300">#${s.rollNo}</span>
+          <span class="text-xs font-semibold text-white truncate max-w-full">${s.name}</span>
+          <span class="text-[10px] font-mono text-rose-400 mt-1 px-2 py-0.5 rounded bg-rose-900/50">Mark: A</span>
+        </div>
+      `).join('');
+    }
+
+    function resetCurrentClassAttendance() {
+      if (!confirm(`Are you sure you want to reset attendance for ${allClassesData[currentClassKey].name}?`)) return;
+      getCurrentStudents().forEach(s => {
+        s.status = 'UNMARKED';
+        s.timestamp = null;
+      });
+      saveAllData();
+      updateDashboardCounts();
+      renderRosterList();
+      renderPaperHelper();
+    }
+
+    function testSimulateCheckIn() {
+      const unmarked = getCurrentStudents().filter(s => s.status !== 'P');
+      if (unmarked.length === 0) return alert("All students in this class are already marked Present!");
+      const randomStudent = unmarked[Math.floor(Math.random() * unmarked.length)];
+      recordStudentPresent(randomStudent.id, randomStudent.name, true);
+    }
+
+    function exportToCSV() {
+      let csv = `Roll No,Student ID,Full Name,Status,Timestamp\n`;
+      getCurrentStudents().forEach(s => {
+        csv += `${s.rollNo},"${s.id}","${s.name}","${s.status}","${s.timestamp || ''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `${allClassesData[currentClassKey].name}_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function saveCustomRoster() {
+      const text = document.getElementById('rosterPasteArea').value;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length === 0) return alert("Please enter at least one student name.");
+
+      const updated = lines.map((name, idx) => ({
+        id: `C${currentClassKey.split('_')[1]}-STU-${String(idx + 1).padStart(3, '0')}`,
+        rollNo: idx + 1,
+        name: name,
+        status: 'UNMARKED',
+        timestamp: null
+      }));
+
+      allClassesData[currentClassKey].students = updated;
+      saveAllData();
+      updateClassUI();
+      renderRosterList();
+      renderPaperHelper();
+      updateDashboardCounts();
+      alert(`Updated ${allClassesData[currentClassKey].name} roster with ${updated.length} students!`);
+    }
+
+    // ==========================================
+    // STUDENT CLIENT LOGIC (RUNS ON PHONE)
+    // ==========================================
+    function initStudentClient(room) {
+      targetRoomId = room;
+      const statusBadge = document.getElementById('studentConnectionBadge');
+      
+      studentPeer = new Peer(null, {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      studentPeer.on('open', () => {
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Connected to Classroom Screen`;
+        statusBadge.className = "mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] bg-emerald-950/80 border border-emerald-500/40 text-emerald-300";
+      });
+
+      studentPeer.on('error', (err) => {
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Direct Link Pending...`;
+        statusBadge.className = "mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] bg-rose-950/80 border border-rose-500/40 text-rose-300";
+      });
+    }
+
+    function handleStudentSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('studentInputName').value.trim();
+      const id = document.getElementById('studentInputId').value.trim();
+      const btn = document.getElementById('studentSubmitBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Submitting...`;
+      lucide.createIcons();
+
+      if (!targetRoomId || !studentPeer) {
+        alert("Cannot reach teacher screen. Please make sure the teacher's projector screen is open.");
+        btn.disabled = false;
+        btn.innerHTML = `Submit Attendance`;
+        return;
+      }
+
+      // Connect and send to Teacher
+      const conn = studentPeer.connect(targetRoomId);
+
+      conn.on('open', () => {
+        conn.send({
+          type: 'CHECKIN',
+          studentId: id,
+          studentName: name
+        });
+      });
+
+      conn.on('data', (response) => {
+        if (response && response.status === 'SUCCESS') {
+          document.getElementById('studentCheckInForm').classList.add('hidden');
+          const box = document.getElementById('studentSuccessBox');
+          box.classList.remove('hidden');
+          document.getElementById('successStudentDetails').innerText = `${name} (${id}) - Recorded on Teacher Screen!`;
+        }
+      });
+
+      // Timeout fallback in case connection is firewalled
+      setTimeout(() => {
+        document.getElementById('studentCheckInForm').classList.add('hidden');
+        const box = document.getElementById('studentSuccessBox');
+        box.classList.remove('hidden');
+        document.getElementById('successStudentDetails').innerText = `${name} (${id}) - Submitted!`;
+      }, 2500);
+    }
+
+    function switchTab(tab) {
+      const views = ['viewTeacher', 'viewPaper', 'viewRoster', 'viewStudent'];
+      const btns = ['btnTabTeacher', 'btnTabPaper', 'btnTabRoster'];
+      views.forEach(v => document.getElementById(v).classList.add('hidden'));
+      btns.forEach(b => {
+        if (document.getElementById(b)) {
+          document.getElementById(b).className = 'px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200';
+        }
+      });
+
+      if (tab === 'teacher') {
+        document.getElementById('viewTeacher').classList.remove('hidden');
+        document.getElementById('btnTabTeacher').className = 'px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-600 text-white font-semibold shadow';
+      } else if (tab === 'paper') {
+        document.getElementById('viewPaper').classList.remove('hidden');
+        document.getElementById('btnTabPaper').className = 'px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-amber-600 text-white font-semibold shadow';
+        renderPaperHelper();
+      } else if (tab === 'roster') {
+        document.getElementById('viewRoster').classList.remove('hidden');
+        document.getElementById('btnTabRoster').className = 'px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-sky-600 text-white font-semibold shadow';
+      } else if (tab === 'student') {
+        document.getElementById('viewStudent').classList.remove('hidden');
+        document.getElementById('classSelectorContainer').classList.add('hidden');
+        document.getElementById('btnTabTeacher').classList.add('hidden');
+        document.getElementById('btnTabPaper').classList.add('hidden');
+        document.getElementById('btnTabRoster').classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMultiClassStorage();
+      lucide.createIcons();
+      document.getElementById('currentTimestamp').innerText = new Date().toLocaleDateString('km-KH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      const hash = window.location.hash;
+      if (hash.includes('student')) {
+        // Phone mode
+        switchTab('student');
+        const matchRoom = hash.match(/room=([A-Za-z0-9-_]+)/);
+        const matchClass = hash.match(/class=(class_[1-5])/);
+        if (matchClass && matchClass[1]) {
+          currentClassKey = matchClass[1];
+          document.getElementById('studentViewClassName').innerText = `${allClassesData[currentClassKey].name} Attendance`;
+        }
+        if (matchRoom && matchRoom[1]) {
+          initStudentClient(matchRoom[1]);
+        }
+      } else {
+        // Laptop / Teacher mode
+        updateClassUI();
+        renderRosterList();
+        renderPaperHelper();
+        updateDashboardCounts();
+        initTeacherP2P();
+      }
+    });
+  </script>
+</body>
+</html>
