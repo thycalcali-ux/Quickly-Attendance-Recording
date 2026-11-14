@@ -680,10 +680,11 @@
         teacherPeer.destroy();
       }
 
-      const roomId = `HS-ATTEND-${currentClassKey.toUpperCase()}-${Math.floor(Date.now() / 86400000)}`;
-      document.getElementById('teacherPeerId').innerText = roomId;
+      document.getElementById('teacherPeerId').innerText = "Connecting...";
+      document.getElementById('p2pDot').classList.replace('bg-rose-500', 'bg-emerald-500');
+      document.getElementById('qrcodeCanvas').innerHTML = '';
 
-      teacherPeer = new Peer(roomId, {
+      teacherPeer = new Peer({
         debug: 1,
         config: {
           iceServers: [
@@ -695,6 +696,7 @@
 
       teacherPeer.on('open', (id) => {
         document.getElementById('teacherPeerId').innerText = id;
+        document.getElementById('p2pDot').classList.replace('bg-rose-500', 'bg-emerald-500');
         generateTeacherQR(id);
       });
 
@@ -709,6 +711,8 @@
 
       teacherPeer.on('error', (err) => {
         console.warn("Peer error, falling back:", err);
+        document.getElementById('teacherPeerId').innerText = "Connection error — reload to retry";
+        document.getElementById('p2pDot').classList.replace('bg-emerald-500', 'bg-rose-500');
       });
     }
 
@@ -929,6 +933,9 @@
     function initStudentClient(room) {
       targetRoomId = room;
       const statusBadge = document.getElementById('studentConnectionBadge');
+      const submitButton = document.getElementById('studentSubmitBtn');
+      submitButton.disabled = true;
+      submitButton.innerText = 'Connecting...';
       
       studentPeer = new Peer(null, {
         debug: 1,
@@ -941,13 +948,18 @@
       });
 
       studentPeer.on('open', () => {
-        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Connected to Classroom Screen`;
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Ready to connect to teacher`;
         statusBadge.className = "mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] bg-emerald-950/80 border border-emerald-500/40 text-emerald-300";
+        submitButton.disabled = false;
+        submitButton.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Submit Attendance / បញ្ជាក់វត្តមាន`;
+        lucide.createIcons();
       });
 
       studentPeer.on('error', (err) => {
-        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Direct Link Pending...`;
+        console.warn("Student PeerJS error:", err);
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Could not connect to attendance service. Reload and retry.`;
         statusBadge.className = "mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] bg-rose-950/80 border border-rose-500/40 text-rose-300";
+        submitButton.disabled = true;
       });
     }
 
@@ -961,14 +973,25 @@
       btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Submitting...`;
       lucide.createIcons();
 
-      if (!targetRoomId || !studentPeer) {
+      if (!targetRoomId || !studentPeer || !studentPeer.open) {
         alert("Cannot reach teacher screen. Please make sure the teacher's projector screen is open.");
         btn.disabled = false;
-        btn.innerHTML = `Submit Attendance`;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Submit Attendance / បញ្ជាក់វត្តមាន`;
+        lucide.createIcons();
         return;
       }
 
       const conn = studentPeer.connect(targetRoomId);
+      let completed = false;
+      const timeout = setTimeout(() => {
+        if (completed) return;
+        completed = true;
+        conn.close();
+        alert("No confirmation from the teacher screen. Check that the teacher is online, then try again.");
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Try Again / ព្យាយាមម្តងទៀត`;
+        lucide.createIcons();
+      }, 15000);
 
       conn.on('open', () => {
         conn.send({
@@ -979,7 +1002,9 @@
       });
 
       conn.on('data', (response) => {
-        if (response && response.status === 'SUCCESS') {
+        if (!completed && response && response.status === 'SUCCESS') {
+          completed = true;
+          clearTimeout(timeout);
           document.getElementById('studentCheckInForm').classList.add('hidden');
           const box = document.getElementById('studentSuccessBox');
           box.classList.remove('hidden');
@@ -987,12 +1012,26 @@
         }
       });
 
-      setTimeout(() => {
-        document.getElementById('studentCheckInForm').classList.add('hidden');
-        const box = document.getElementById('studentSuccessBox');
-        box.classList.remove('hidden');
-        document.getElementById('successStudentDetails').innerText = `${name} (${id}) - Submitted!`;
-      }, 2500);
+      conn.on('error', (err) => {
+        console.warn("Attendance connection error:", err);
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeout);
+        alert("Could not send attendance to the teacher screen. Please check the connection and try again.");
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Try Again / ព្យាយាមម្តងទៀត`;
+        lucide.createIcons();
+      });
+
+      conn.on('close', () => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeout);
+        alert("The connection closed before the teacher confirmed attendance. Please try again.");
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Try Again / ព្យាយាមម្តងទៀត`;
+        lucide.createIcons();
+      });
     }
 
     function switchTab(tab) {
